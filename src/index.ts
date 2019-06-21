@@ -1,5 +1,15 @@
 import * as cssesc from 'cssesc'
 
+function arrayFrom(gen) {
+  let result = gen.next();
+  var arr = <any[]>[];
+  while (!result.done) {
+    arr.push(result.value);
+    result = gen.next();
+  }
+  return arr;
+}
+
 type Node = {
   name: string
   penalty: number
@@ -22,6 +32,7 @@ export type Options = {
   seedMinLength: number
   optimizedMinLength: number
   threshold: number
+  allowNonUniqueSelector: boolean
 }
 
 let config: Options
@@ -44,9 +55,10 @@ export default function (input: Element, options?: Partial<Options>) {
     seedMinLength: 1,
     optimizedMinLength: 2,
     threshold: 1000,
+    allowNonUniqueSelector: false,
   }
 
-  config = {...defaults, ...options}
+  config = { ...defaults, ...options }
 
   rootDocument = findRootDocument(config.root, defaults)
 
@@ -128,6 +140,10 @@ function bottomUpSearch(input: Element, limit: Limit, fallback?: () => Path | nu
     path = findUniquePath(stack, fallback)
   }
 
+  if (!path && config.allowNonUniqueSelector) {
+    path = findNonUniquePath(stack, fallback);
+  }
+
   return path
 }
 
@@ -142,6 +158,20 @@ function findUniquePath(stack: Node[][], fallback?: () => Path | null): Path | n
     if (unique(candidate)) {
       return candidate
     }
+  }
+
+  return null
+}
+
+function findNonUniquePath(stack: Node[][], fallback?: () => Path | null): Path | null {
+  const paths = sort(combinations(stack))
+
+  if (paths.length > config.threshold) {
+    return fallback ? fallback() : null
+  }
+
+  for (let candidate of paths) {
+    return candidate
   }
 
   return null
@@ -183,7 +213,7 @@ function id(input: Element): Node | null {
   const elementId = input.getAttribute('id')
   if (elementId && config.idName(elementId)) {
     return {
-      name: '#' + cssesc(elementId, {isIdentifier: true}),
+      name: '#' + cssesc(elementId, { isIdentifier: true }),
       penalty: 0,
     }
   }
@@ -195,7 +225,7 @@ function classNames(input: Element): Node[] {
     .filter(config.className)
 
   return names.map((name): Node => ({
-    name: '.' + cssesc(name, {isIdentifier: true}),
+    name: '.' + cssesc(name, { isIdentifier: true }),
     penalty: 1
   }))
 }
@@ -268,7 +298,7 @@ function notEmpty<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined
 }
 
-function* combinations(stack: Node[][], path: Node[] = []) {
+function* combinations(stack: any[][], path: any[] = []) {
   if (stack.length > 0) {
     for (let node of stack[0]) {
       yield* combinations(stack.slice(1, stack.length), path.concat(node))
@@ -279,7 +309,7 @@ function* combinations(stack: Node[][], path: Node[] = []) {
 }
 
 function sort(paths: Iterable<Path>): Path[] {
-  return Array.from(paths).sort((a, b) => penalty(a) - penalty(b))
+  return arrayFrom(paths).sort((a, b) => penalty(a) - penalty(b))
 }
 
 function* optimize(path: Path, input: Element) {

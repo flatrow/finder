@@ -34,7 +34,7 @@
     "awesome-typescript-loader": "^5.2.1",
     "browser-env": "^3.2.5",
     "release-it": "^7.6.1",
-    "typescript": "3.0.1",
+    "typescript": "^3.5.2",
     "webpack": "^4.29.3",
     "webpack-cli": "^3.2.3"
   },
