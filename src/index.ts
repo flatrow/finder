@@ -184,9 +184,9 @@ function selector(path: Path): string {
     const level = path[i].level || 0
 
     if (node.level === level - 1) {
-      query = `${path[i].name} > ${query}`
+      query = path[i].name + ' > ' + query
     } else {
-      query = `${path[i].name} ${query}`
+      query = path[i].name + ' ' + query
     }
 
     node = path[i]
@@ -312,7 +312,7 @@ function sort(paths: Iterable<Path>): Path[] {
   return arrayFrom(paths).sort((a, b) => penalty(a) - penalty(b))
 }
 
-function* optimize(path: Path, input: Element) {
+function* optimize(path: Path, input: Element, finishTime: number = Number(new Date()) + 5000) {
   if (path.length > 2 && path.length > config.optimizedMinLength) {
     for (let i = 1; i < path.length - 1; i++) {
       const newPath = [...path]
@@ -320,7 +320,9 @@ function* optimize(path: Path, input: Element) {
 
       if (unique(newPath) && same(newPath, input)) {
         yield newPath
-        yield* optimize(newPath, input)
+        if (finishTime < Number(new Date())) {
+          yield* optimize(newPath, input, finishTime)
+        }
       }
     }
   }
